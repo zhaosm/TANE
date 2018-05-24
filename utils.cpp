@@ -4,7 +4,8 @@
 #include "utils.h"
 
 
-
+std::vector<int> T(ROW_NUM, -1);
+std::vector<std::vector<int>> S(ROW_NUM);
 
 void tane(std::string (&r)[ROW_NUM][COL_NUM], std::vector<uint32_t> &result) {
     int i, j;
@@ -125,6 +126,42 @@ void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext, std::m
 }
 
 void computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vector<std::vector<int>> &partition2, std::vector<std::vector<int>> &result) {
+    result.clear();
+    int i, size1 = partition1.size(), size2 = partition2.size();
+    for (i = 0;i < size1; i++) {
+        auto vit = partition1[i].begin();
+        auto vend = partition1[i].end();
+        for (; vit != vend; vit++) {
+            T[*vit] = i;
+            S[i].clear();
+        }
+    }
+    for (i = 0; i < size2; i++) {
+        auto vit = partition2[i].begin();
+        auto vend = partition2[i].end();
+        for (; vit != vend; vit++) {
+            if (T[*vit] != -1) {
+                S[T[*vit]].push_back(*vit);
+            }
+        }
+        for (vit = partition2[i].begin(); vit != vend; vit++) {
+            auto temp = S[T[*vit]];
+            if (temp.size() >= 2) {
+                result.push_back(temp);
+            }
+            S[T[*vit]].clear();
+        }
+    }
+    for (i = 0; i < size1; i++) {
+        auto vit = partition1[i].begin();
+        auto vend = partition1[i].end();
+        for (; vit != vend; vit++) {
+            T[*vit] = -1;
+        }
+    }
+}
+
+int computeE(std::vector<std::vector<int>> &partition) {
 
 }
 
