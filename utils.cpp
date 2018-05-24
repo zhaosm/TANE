@@ -2,12 +2,33 @@
 // Created by 赵尚明 on 2018/5/24.
 //
 #include "utils.h"
+#include <fstream>
 
 
 std::vector<int> T(ROW_NUM, -1);
 std::vector<std::vector<int>> S(ROW_NUM);
 
-void tane(std::string (&r)[ROW_NUM][COL_NUM], std::vector<uint32_t> &result) {
+void readData(std::string fname, std::vector<std::vector<std::string>> &r) {
+    std::ifstream fin(fname);
+    std::string s;
+    int i = 0, j, st, len;
+    while (getline(fin, s)) {
+        len = (int)s.length();
+        st = 0;
+        std::vector<std::string> temp;
+        for (j = 0; j < len; j++) {
+            if (s[j] == ',') {
+                temp.push_back(s.substr(st, j - st));
+                st = j + 1;
+            }
+        }
+        temp.push_back(s.substr(st, j - st));
+        r.push_back(temp);
+        i++;
+    }
+}
+
+void tane(std::vector<std::vector<std::string>> &r, std::vector<uint32_t> &result) {
     int i, j;
     std::set<uint32_t> L;
     std::map<uint32_t, uint32_t> RHSCs;
@@ -46,14 +67,14 @@ void computeDependencies(std::set<uint32_t> &L, std::map<uint32_t, uint32_t> &RH
     }
     for (Lit = L.begin(); Lit != Litend; Lit++) {
         auto test = (uint32_t)1;
-        auto xe = computeE(partitions[*Lit]);
         while (test <= 32768) {
             auto RHSCit = RHSCs.find(*Lit);
             auto intersect = *Lit & RHSCit->second; // X intersect C+(X)
             auto temp = test ^ intersect;
             if (intersect != temp) { // A belongs to X intersect C+(X)
                 temp = *Lit & test; // X \ { A }
-                if (computeE(partitions[temp]) == xe) {
+                if (computeE(partitions[*Lit], partitions[temp]) == 0) {
+                    // dependency
                     deps.push_back((*Lit << 16) | test);
                     RHSCit->second ^= test;
                     RHSCit->second &= *Lit;
@@ -106,7 +127,7 @@ void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext, std::m
         Lit2 = Lit1++;
         Lit1--;
         for (; Lit2 != Lend; Lit2++) {
-            if ((*Lit1 & (*Lit1 - 1)) & (*Lit2 & (*Lit2 - 1)) == (*Lit1 & (*Lit1 - 1))) {
+            if (((*Lit1 & (*Lit1 - 1)) & (*Lit2 & (*Lit2 - 1))) == (*Lit1 & (*Lit1 - 1))) {
                 // Y, Z belong to K, K belongs to PREFIX_BLOCKS(Ll)
                 auto test = (uint32_t)1;
                 auto x = *Lit1 | *Lit2;
@@ -161,8 +182,42 @@ void computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vect
     }
 }
 
-int computeE(std::vector<std::vector<int>> &partition) {
+int computeE(std::vector<std::vector<int>> &sub, std::vector<std::vector<int>> &sup) {
+    auto it = sup.begin(), itend = sup.end();
+    int e = 0;
+    for (; it != itend; it++) {
+        T[(*it)[0]] = (int)(*it).size();
+    }
+    itend = sub.end();
+    for (it = sub.begin(); it != itend; it++) {
+        int m = 1;
+        auto it1 = (*it).begin(), itend1 = (*it).end();
+        for (; it1 != itend1; it1++) {
+            m = m > T[*it1] ? m : T[*it1];
+        }
+        e = e + (int)(*it).size() - m;
+    }
+    itend = sup.end();
+    for (it = sup.begin(); it != itend; it++) {
+        T[(*it)[0]] = -1;
+    }
+    return e;
+}
 
+void computeSingleAttributePartition(std::vector<std::vector<std::string>> &r, int attributeIndex, std::vector<std::vector<int>> &result) {
+    std::map<std::string, int> values;
+    int i;
+    for (i = 0; i < ROW_NUM; i++) {
+        auto it = values.find(r[i][attributeIndex]);
+        if (it == values.end()) {
+            std::vector<int> temp;
+            temp.push_back(i);
+            result.push_back(temp);
+            values[r[i][attributeIndex]] = (int)result.size() - 1;
+        } else {
+            result[it->second].push_back(i);
+        }
+    }
 }
 
 
