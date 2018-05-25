@@ -17,7 +17,7 @@ class TANE {
 public:
     std::vector<int> T;
     std::vector<std::vector<int>> S;
-    std::vector<std::vector<int>> combinations;
+    // std::vector<std::vector<int>> combinations;
     std::vector<std::vector<std::vector<int>>> partitions;
     std::vector<uint32_t> RHSCs;
     std::vector<std::vector<std::string>> r;
@@ -35,7 +35,7 @@ public:
     void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext);
     void computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vector<std::vector<int>> &partition2, std::vector<std::vector<int>> &result);
     void computeSingleAttributePartition(int attributeIndex, std::vector<std::vector<int>> &result);
-    void computePrefixBlocks(std::set<uint32_t> &Ll, std::set<std::set<uint32_t>> &result);
+    void computePrefixBlocks(std::set<uint32_t> &Ll, std::vector<std::vector<uint32_t>> &result);
 };
 
 #endif //TANE_TANE_H
