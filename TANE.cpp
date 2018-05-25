@@ -94,33 +94,6 @@ void TANE::prune(std::set<uint32_t> &Ll) {
             Lend = Ll.end();
             continue;
         }
-        if (partitions[*Lit].size() == 0) {
-            // X is a superkey
-            auto dif = RHSCs[*Lit] & ~*Lit; // C+(X) \ X
-            auto i = (int)log2((double)dif);
-            auto test = (uint32_t)1 << i;
-            auto _dif = dif << (17 + COL_NUM - i - 1);
-            while (_dif > (uint32_t)0) {
-                if (test != *Lit) {
-                    if ((dif & ~test) != dif) {
-                        // A belongs to dif
-                        auto intersect = (uint32_t)32767;
-                        auto test1 = (uint32_t)1;
-                        while (test1 <= *Lit) {
-                            if ((*Lit & ~test1) != *Lit) {
-                                intersect &= RHSCs[(*Lit | test) & ~test1];
-                            }
-                            test1 = test1 << 1;
-                        }
-                        if ((intersect & ~test) != intersect) {
-                            deps.insert((*Lit << 16) | test);
-                        }
-                    }
-                }
-                test = test >> 1;
-                _dif = _dif << 1;
-            }
-        }
         Lit++;
     }
 }
@@ -170,7 +143,7 @@ void TANE::generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext) 
 void TANE::computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vector<std::vector<int>> &partition2, std::vector<std::vector<int>> &result) {
     result.clear();
     std::vector<int> emptyVec;
-    int i, j, size1 = partition1.size(), size2 = partition2.size();
+    int i, size1 = partition1.size(), size2 = partition2.size();
     for (i = 0;i < size1; i++) {
         auto vit = partition1[i].begin();
         auto vend = partition1[i].end();
