@@ -8,7 +8,7 @@
 
 
 std::vector<int> T(ROW_NUM, -1);
-std::vector<std::set<int>> S(ROW_NUM);
+std::vector<std::vector<int>> S(0);
 std::map<uint32_t, std::set<int>> combinations;
 
 void readData(std::string fname, std::vector<std::vector<std::string>> &r) {
@@ -36,14 +36,14 @@ void tane(std::vector<std::vector<std::string>> &r, std::set<uint32_t> &deps) {
     std::set<uint32_t> L;
     std::map<uint32_t, uint32_t> RHSCs;
     RHSCs[(uint32_t)0] = (uint32_t)32767;
-    std::map<uint32_t, std::vector<std::set<int>>> partitions;
+    std::map<uint32_t, std::vector<std::vector<int>>> partitions;
     for (i = 0; i < COL_NUM; i++) {
         uint32_t temp = (uint32_t)1 << i;
         L.insert(temp);
         std::set<int> attributes;
         attributes.insert(i);
         combinations[temp] = attributes;
-        partitions[temp] = std::vector<std::set<int>>(0);
+        partitions[temp] = std::vector<std::vector<int>>(0);
         computeSingleAttributePartition(r, i, partitions[temp]);
     }
     while (L.size() != 0) {
@@ -57,7 +57,7 @@ void tane(std::vector<std::vector<std::string>> &r, std::set<uint32_t> &deps) {
     }
 }
 
-void computeDependencies(std::set<uint32_t> &L, std::map<uint32_t, uint32_t> &RHSCs, std::map<uint32_t, std::vector<std::set<int>>> &partitions, std::set<uint32_t> &deps) {
+void computeDependencies(std::set<uint32_t> &L, std::map<uint32_t, uint32_t> &RHSCs, std::map<uint32_t, std::vector<std::vector<int>>> &partitions, std::set<uint32_t> &deps) {
     std::set<uint32_t>::iterator Lit, Litend = L.end();
     for (Lit = L.begin(); Lit != Litend; Lit++) {
         RHSCs[*Lit] = (uint32_t)32767;
@@ -79,7 +79,7 @@ void computeDependencies(std::set<uint32_t> &L, std::map<uint32_t, uint32_t> &RH
             auto temp = (intersect & ~test) & intersect;
             if (intersect != temp) { // A belongs to X intersect C+(X)
                 temp = *Lit & ~test; // X \ { A }
-                if (computeE(partitions[temp], partitions[*Lit]) == 0) {
+                if (partitions[temp].size() == partitions[*Lit].size()) {
                     // dependency
                     deps.insert((temp << 16) | test);
                     RHSCit->second = RHSCit->second & ~test;
@@ -90,7 +90,7 @@ void computeDependencies(std::set<uint32_t> &L, std::map<uint32_t, uint32_t> &RH
     }
 }
 
-void prune(std::set<uint32_t> &Ll, std::map<uint32_t, uint32_t> &RHSCs, std::map<uint32_t, std::vector<std::set<int>>> &partitions, std::set<uint32_t> &deps) {
+void prune(std::set<uint32_t> &Ll, std::map<uint32_t, uint32_t> &RHSCs, std::map<uint32_t, std::vector<std::vector<int>>> &partitions, std::set<uint32_t> &deps) {
     std::set<uint32_t>::iterator Lit, Lend = Ll.end();
     for (Lit = Ll.begin(); Lit != Lend; ) {
         auto RHSCit = RHSCs.find(*Lit);
@@ -128,14 +128,17 @@ void prune(std::set<uint32_t> &Ll, std::map<uint32_t, uint32_t> &RHSCs, std::map
     }
 }
 
-void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext, std::map<uint32_t, std::vector<std::set<int>>> &partitions) {
+void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext, std::map<uint32_t, std::vector<std::vector<int>>> &partitions) {
     Lnext.clear();
     std::set<uint32_t>::iterator Lit1, Lit2, Lend = Ll.end();
-    for (Lit1 = Ll.begin(); Lit1 != Lend; Lit1++) {
-        Lit2 = ++Lit1;
-        Lit1--;
-        for (; Lit2 != Lend; Lit2++) {
-            if ((*Lit1 & (*Lit1 - 1)) == (*Lit2 & (*Lit2 - 1))) {
+    std::set<std::set<uint32_t>> prefixBlocks;
+    computePrefixBlocks(Ll, prefixBlocks);
+    auto bit = prefixBlocks.begin(), bend = prefixBlocks.end();
+    for (; bit != bend; bit++) {
+        if ((*bit).size() < 2) continue;
+        auto Lend1 = (*bit).end();
+        for (Lit1 = (*bit).begin(); Lit1 != Lend1; Lit1++) {
+            for (Lit2 = next(Lit1); Lit2 != Lend1; Lit2++) {
                 // Y, Z belong to K, K belongs to PREFIX_BLOCKS(Ll)
                 // debug
                 auto test = (uint32_t)1;
@@ -157,7 +160,7 @@ void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext, std::m
                 }
                 if (flag) {
                     Lnext.insert(x);
-                    partitions[x] = std::vector<std::set<int>>(0);
+                    partitions[x] = std::vector<std::vector<int>>(0);
                     computeStrippedProduct(partitions[*Lit1], partitions[*Lit2], partitions[x]);
                     combinations[x] = attributes;
                 }
@@ -166,23 +169,24 @@ void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext, std::m
     }
 }
 
-void computeStrippedProduct(std::vector<std::set<int>> &partition1, std::vector<std::set<int>> &partition2, std::vector<std::set<int>> &result) {
+void computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vector<std::vector<int>> &partition2, std::vector<std::vector<int>> &result) {
     result.clear();
+    std::vector<int> emptyVec;
     int i, size1 = partition1.size(), size2 = partition2.size();
     for (i = 0;i < size1; i++) {
         auto vit = partition1[i].begin();
         auto vend = partition1[i].end();
         for (; vit != vend; vit++) {
             T[*vit] = i;
-            S[i].clear();
         }
+        S.push_back(emptyVec);
     }
     for (i = 0; i < size2; i++) {
         auto vit = partition2[i].begin();
         auto vend = partition2[i].end();
         for (; vit != vend; vit++) {
             if (T[*vit] != -1) {
-                S[T[*vit]].insert(*vit);
+                S[T[*vit]].push_back(*vit);
             }
         }
         for (vit = partition2[i].begin(); vit != vend; vit++) {
@@ -202,33 +206,34 @@ void computeStrippedProduct(std::vector<std::set<int>> &partition1, std::vector<
             T[*vit] = -1;
         }
     }
+    S.clear();
 }
 
-int computeE(std::vector<std::set<int>> &sub, std::vector<std::set<int>> &sup) {
-    auto it = sup.begin(), itend = sup.end();
-    int e = 0;
-    for (; it != itend; it++) {
-        auto tempit = (*it).begin();
-        T[*tempit] = (int)(*it).size();
-    }
-    itend = sub.end();
-    for (it = sub.begin(); it != itend; it++) {
-        int m = 1;
-        auto it1 = (*it).begin(), itend1 = (*it).end();
-        for (; it1 != itend1; it1++) {
-            m = m > T[*it1] ? m : T[*it1];
-        }
-        e = e + (int)(*it).size() - m;
-    }
-    itend = sup.end();
-    for (it = sup.begin(); it != itend; it++) {
-        auto tempit = (*it).begin();
-        T[*tempit] = -1;
-    }
-    return e;
-}
+//int computeE(std::vector<std::set<int>> &sub, std::vector<std::set<int>> &sup) {
+//    auto it = sup.begin(), itend = sup.end();
+//    int e = 0;
+//    for (; it != itend; it++) {
+//        auto tempit = (*it).begin();
+//        T[*tempit] = (int)(*it).size();
+//    }
+//    itend = sub.end();
+//    for (it = sub.begin(); it != itend; it++) {
+//        int m = 1;
+//        auto it1 = (*it).begin(), itend1 = (*it).end();
+//        for (; it1 != itend1; it1++) {
+//            m = m > T[*it1] ? m : T[*it1];
+//        }
+//        e = e + (int)(*it).size() - m;
+//    }
+//    itend = sup.end();
+//    for (it = sup.begin(); it != itend; it++) {
+//        auto tempit = (*it).begin();
+//        T[*tempit] = -1;
+//    }
+//    return e;
+//}
 
-void computeSingleAttributePartition(std::vector<std::vector<std::string>> &r, int attributeIndex, std::vector<std::set<int>> &result) {
+void computeSingleAttributePartition(std::vector<std::vector<std::string>> &r, int attributeIndex, std::vector<std::vector<int>> &result) {
     result.clear();
     std::map<std::string, int> values;
     std::vector<std::set<int>> tempResult;
@@ -250,9 +255,39 @@ void computeSingleAttributePartition(std::vector<std::vector<std::string>> &r, i
     }
     auto it = tempResult.begin(), itend = tempResult.end();
     k = (int)sizes.size();
+    std::vector<int> emptyVec;
     for (i = 0; i < k; i++) {
         if (sizes[i] > 1) {
-            result.push_back(tempResult[i]);
+            auto tempVec = emptyVec;
+            auto rit = tempResult[i].begin(), rend = tempResult[i].end();
+            for (; rit != rend; rit++) {
+                tempVec.push_back(*rit);
+            }
+            result.push_back(tempVec);
         }
+    }
+}
+
+void computePrefixBlocks(std::set<uint32_t> &Ll, std::set<std::set<uint32_t>> &result) {
+    std::map<uint32_t, std::set<uint32_t>> tempResult;
+    std::set<uint32_t> emptySet;
+    auto it = Ll.begin(), itend = Ll.end();
+    for (; it != itend; it++) {
+        auto test = (uint32_t)16384;
+        while (test > 0) {
+            auto dif = *it & ~test;
+            if (dif != *it) {
+                if (tempResult.find(dif) == tempResult.end()) {
+                    tempResult[dif] = emptySet;
+                }
+                tempResult[dif].insert(*it);
+                break;
+            }
+            test = test >> 1;
+        }
+    }
+    auto rit = tempResult.begin(), rend = tempResult.end();
+    for (; rit != rend; rit++) {
+        result.insert(rit->second);
     }
 }
