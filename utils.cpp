@@ -81,7 +81,7 @@ void computeDependencies(std::set<uint32_t> &L, std::map<uint32_t, uint32_t> &RH
                 temp = *Lit & ~test; // X \ { A }
                 if (computeE(partitions[temp], partitions[*Lit]) == 0) {
                     // dependency
-                    deps.insert((*Lit << 16) | test);
+                    deps.insert((temp << 16) | test);
                     RHSCit->second = RHSCit->second & ~test;
                     RHSCit->second &= *Lit;
                 }
@@ -92,7 +92,7 @@ void computeDependencies(std::set<uint32_t> &L, std::map<uint32_t, uint32_t> &RH
 
 void prune(std::set<uint32_t> &Ll, std::map<uint32_t, uint32_t> &RHSCs, std::map<uint32_t, std::vector<std::set<int>>> &partitions, std::set<uint32_t> &deps) {
     std::set<uint32_t>::iterator Lit, Lend = Ll.end();
-    for (Lit = Ll.begin(); Lit != Lend; Lit++) {
+    for (Lit = Ll.begin(); Lit != Lend; ) {
         auto RHSCit = RHSCs.find(*Lit);
         if (RHSCit->second == (uint32_t)0) {
             // C+(X) == empty set
@@ -106,22 +106,25 @@ void prune(std::set<uint32_t> &Ll, std::map<uint32_t, uint32_t> &RHSCs, std::map
             auto test = (uint32_t)1;
             auto dif = RHSCs[*Lit] & ~*Lit; // C+(X) \ X
             while (test <= dif) {
-                if ((dif & ~test) != dif) {
-                    // A belongs to dif
-                    auto intersect = (uint32_t)32767;
-                    auto ait = attributes.begin(), aend = attributes.end();
-                    for (; ait != aend; ait++) {
-                        // pick an attribute from X
-                        auto test1 = (uint32_t)1 << (*ait);
-                        intersect &= RHSCs[(*Lit | test) & ~test1];
-                    }
-                    if ((intersect & ~test) != intersect) {
-                        deps.insert((*Lit << 16) | test);
+                if (test != *Lit) {
+                    if ((dif & ~test) != dif) {
+                        // A belongs to dif
+                        auto intersect = (uint32_t)32767;
+                        auto ait = attributes.begin(), aend = attributes.end();
+                        for (; ait != aend; ait++) {
+                            // pick an attribute from X
+                            auto test1 = (uint32_t)1 << (*ait);
+                            intersect &= RHSCs[(*Lit | test) & ~test1];
+                        }
+                        if ((intersect & ~test) != intersect) {
+                            deps.insert((*Lit << 16) | test);
+                        }
                     }
                 }
                 test = test << 1;
             }
         }
+        Lit++;
     }
 }
 
