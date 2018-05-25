@@ -25,7 +25,6 @@ extern void computeDependencies(std::set<uint32_t> &L, std::set<uint32_t> &deps)
 extern void prune(std::set<uint32_t> &Ll, std::set<uint32_t> &deps);
 extern void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext);
 extern void computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vector<std::vector<int>> &partition2, std::vector<std::vector<int>> &result);
-// extern int computeE(std::vector<std::vector<int>> &sub, std::vector<std::vector<int>> &sup);
 extern void computeSingleAttributePartition(std::vector<std::vector<std::string>> &r, int attributeIndex, std::vector<std::vector<int>> &result);
 extern void computePrefixBlocks(std::set<uint32_t> &Ll, std::set<std::set<uint32_t>> &result);
 

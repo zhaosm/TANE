@@ -1,18 +1,20 @@
 //
-// Created by 赵尚明 on 2018/5/24.
+// Created by 赵尚明 on 2018/5/25.
 //
-#include "utils.h"
+#include "TANE.h"
 #include <fstream>
 #include <math.h>
 #include <iostream>
 
-std::vector<int> T(ROW_NUM, -1);
-std::vector<std::vector<int>> S(0);
-std::vector<std::vector<int>> combinations(32768);
-std::vector<std::vector<std::vector<int>>> partitions(32768);
-std::vector<uint32_t> RHSCs(32768, (uint32_t)0);
 
-void readData(std::string fname, std::vector<std::vector<std::string>> &r) {
+TANE::TANE () {
+    T =  std::vector<int>(ROW_NUM, -1);
+    combinations = std::vector<std::vector<int>>(32768);
+    partitions = std::vector<std::vector<std::vector<int>>>(32768);
+    RHSCs = std::vector<uint32_t>(32768, (uint32_t)0);
+}
+
+void TANE::readData(std::string fname) {
     std::ifstream fin(fname);
     std::string s;
     int i = 0, j, st, len;
@@ -32,7 +34,7 @@ void readData(std::string fname, std::vector<std::vector<std::string>> &r) {
     }
 }
 
-void tane(std::vector<std::vector<std::string>> &r, std::set<uint32_t> &deps) {
+void TANE::tane() {
     int i;
     std::set<uint32_t> L;
     RHSCs[(uint32_t)0] = (uint32_t)32767;
@@ -43,20 +45,20 @@ void tane(std::vector<std::vector<std::string>> &r, std::set<uint32_t> &deps) {
         attributes.push_back(i);
         combinations[temp] = attributes;
         partitions[temp] = std::vector<std::vector<int>>(0);
-        computeSingleAttributePartition(r, i, partitions[temp]);
+        computeSingleAttributePartition(i, partitions[temp]);
     }
     while (L.size() != 0) {
         // debug
         // int s = L.size();
-        computeDependencies(L, deps);
-        prune(L, deps);
+        computeDependencies(L);
+        prune(L);
         std::set<uint32_t> Lnext;
         generateNextLevel(L, Lnext);
         L = Lnext;
     }
 }
 
-void computeDependencies(std::set<uint32_t> &L, std::set<uint32_t> &deps) {
+void TANE::computeDependencies(std::set<uint32_t> &L) {
     std::set<uint32_t>::iterator Lit, Litend = L.end();
     for (Lit = L.begin(); Lit != Litend; Lit++) {
         RHSCs[*Lit] = (uint32_t)32767;
@@ -86,7 +88,7 @@ void computeDependencies(std::set<uint32_t> &L, std::set<uint32_t> &deps) {
     }
 }
 
-void prune(std::set<uint32_t> &Ll, std::set<uint32_t> &deps) {
+void TANE::prune(std::set<uint32_t> &Ll) {
     std::set<uint32_t>::iterator Lit, Lend = Ll.end();
     for (Lit = Ll.begin(); Lit != Lend; ) {
         if (RHSCs[*Lit] == (uint32_t)0) {
@@ -125,7 +127,7 @@ void prune(std::set<uint32_t> &Ll, std::set<uint32_t> &deps) {
     }
 }
 
-void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext) {
+void TANE::generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext) {
     Lnext.clear();
     std::set<uint32_t>::iterator Lit1, Lit2, Lend = Ll.end();
     std::set<std::set<uint32_t>> prefixBlocks;
@@ -170,7 +172,7 @@ void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext) {
     }
 }
 
-void computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vector<std::vector<int>> &partition2, std::vector<std::vector<int>> &result) {
+void TANE::computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vector<std::vector<int>> &partition2, std::vector<std::vector<int>> &result) {
     result.clear();
     std::vector<int> emptyVec;
     int i, size1 = partition1.size(), size2 = partition2.size();
@@ -210,7 +212,7 @@ void computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vect
     S.clear();
 }
 
-void computeSingleAttributePartition(std::vector<std::vector<std::string>> &r, int attributeIndex, std::vector<std::vector<int>> &result) {
+void TANE::computeSingleAttributePartition(int attributeIndex, std::vector<std::vector<int>> &result) {
     result.clear();
     std::map<std::string, int> values;
     std::vector<std::set<int>> tempResult;
@@ -245,7 +247,7 @@ void computeSingleAttributePartition(std::vector<std::vector<std::string>> &r, i
     }
 }
 
-void computePrefixBlocks(std::set<uint32_t> &Ll, std::set<std::set<uint32_t>> &result) {
+void TANE::computePrefixBlocks(std::set<uint32_t> &Ll, std::set<std::set<uint32_t>> &result) {
     std::map<uint32_t, std::set<uint32_t>> tempResult;
     std::set<uint32_t> emptySet;
     auto it = Ll.begin(), itend = Ll.end();

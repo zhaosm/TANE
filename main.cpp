@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
-#include "utils.h"
 #include <time.h>
+#include "TANE.h"
 
 int main() {
     double start, stop;
@@ -10,10 +10,10 @@ int main() {
     std::string ofname = "../data/result.txt";
     std::vector<std::vector<std::string>> r;
     std::ofstream fout(ofname);
-    readData(fname, r);
-    std::set<uint32_t> deps;
-    tane(r, deps);
-    auto it = deps.rbegin(), itend = deps.rend();
+    TANE tane;
+    tane.readData(fname);
+    tane.tane();
+    auto it = tane.deps.rbegin(), itend = tane.deps.rend();
     int i = 0;
     for (; it != itend; it++) {
         i = 0;
