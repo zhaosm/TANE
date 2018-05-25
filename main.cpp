@@ -5,7 +5,6 @@
 
 int main() {
     double start, stop;
-    start = time(NULL);
     start = clock();
     std::string fname = "../data/data.txt";
     std::string ofname = "../data/result.txt";
@@ -14,30 +13,27 @@ int main() {
     readData(fname, r);
     std::set<uint32_t> deps;
     tane(r, deps);
-    auto it = deps.begin(), itend = deps.end();
+    auto it = deps.rbegin(), itend = deps.rend();
     int i = 0;
     for (; it != itend; it++) {
         i = 0;
-        uint32_t temp = (*it) >> 16;
+        uint32_t temp = *it & (uint32_t)4294901760;
         while (i <= 15) {
-            if (temp % 2 == 1) {
-                fout << (i + 1);
-                if ((temp >> 1) != 0) {
-                    fout << ",";
-                }
+            if (temp & (uint32_t)2147483648) {
+                fout << i << " ";
             }
             i++;
-            temp = temp >> 1;
+            temp = temp << 1;
         }
-        fout << "->";
-        temp = *it;
+        fout << "-> ";
+        temp = *it << 16;
         i = 0;
         while (i <= 15) {
-            if (temp % 2 == 1) {
-                fout << (i + 1);
+            if (temp & (uint32_t)2147483648) {
+                fout << i << " ";
             }
             i++;
-            temp = temp >> 1;
+            temp = temp << 1;
         }
         fout << "\n";
     }

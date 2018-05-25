@@ -38,7 +38,7 @@ void tane(std::vector<std::vector<std::string>> &r, std::set<uint32_t> &deps) {
     RHSCs[(uint32_t)0] = (uint32_t)32767;
 //    std::map<uint32_t, std::vector<std::vector<int>>> partitions;
     for (i = 0; i < COL_NUM; i++) {
-        uint32_t temp = (uint32_t)1 << i;
+        uint32_t temp = (uint32_t)1 << (COL_NUM - i - 1);
         L.insert(temp);
         std::vector<int> attributes;
         attributes.push_back(i);
@@ -48,7 +48,7 @@ void tane(std::vector<std::vector<std::string>> &r, std::set<uint32_t> &deps) {
     }
     while (L.size() != 0) {
         // debug
-        int s = L.size();
+        // int s = L.size();
         computeDependencies(L, deps);
         prune(L, deps);
         std::set<uint32_t> Lnext;
@@ -63,7 +63,7 @@ void computeDependencies(std::set<uint32_t> &L, std::set<uint32_t> &deps) {
         RHSCs[*Lit] = (uint32_t)32767;
         auto ait = combinations[*Lit].begin(), aend = combinations[*Lit].end();
         for (; ait != aend; ait++) {
-            RHSCs[*Lit] &= RHSCs[*Lit & ~((uint32_t)1 << (*ait))];
+            RHSCs[*Lit] &= RHSCs[*Lit & ~((uint32_t)1 << (COL_NUM - *ait - 1))];
         }
     }
     for (Lit = L.begin(); Lit != Litend; Lit++) {
@@ -71,7 +71,7 @@ void computeDependencies(std::set<uint32_t> &L, std::set<uint32_t> &deps) {
         auto ait = combinations[*Lit].begin(), aend = combinations[*Lit].end();
         for (; ait != aend; ait++) {
             // an attribute in X
-            auto test = (uint32_t)1 << (*ait);
+            auto test = (uint32_t)1 << (COL_NUM - *ait - 1);
             if (test == *Lit) continue;
             auto temp = (intersect & ~test) & intersect;
             if (intersect != temp) { // A belongs to X intersect C+(X)
@@ -98,9 +98,11 @@ void prune(std::set<uint32_t> &Ll, std::set<uint32_t> &deps) {
         }
         if (partitions[*Lit].size() == 0) {
             // X is a superkey
-            auto test = (uint32_t)1;
             auto dif = RHSCs[*Lit] & ~*Lit; // C+(X) \ X
-            while (test <= dif) {
+            auto i = (int)log2((double)dif);
+            auto test = (uint32_t)1 << i;
+            i = COL_NUM - i - 1;
+            while ((dif << (i + 17)) != dif) {
                 if (test != *Lit) {
                     if ((dif & ~test) != dif) {
                         // A belongs to dif
@@ -108,7 +110,7 @@ void prune(std::set<uint32_t> &Ll, std::set<uint32_t> &deps) {
                         auto ait = combinations[*Lit].begin(), aend = combinations[*Lit].end();
                         for (; ait != aend; ait++) {
                             // pick an attribute from X
-                            auto test1 = (uint32_t)1 << (*ait);
+                            auto test1 = (uint32_t)1 << (COL_NUM - *ait - 1);
                             intersect &= RHSCs[(*Lit | test) & ~test1];
                         }
                         if ((intersect & ~test) != intersect) {
@@ -116,7 +118,8 @@ void prune(std::set<uint32_t> &Ll, std::set<uint32_t> &deps) {
                         }
                     }
                 }
-                test = test << 1;
+                test = test >> 1;
+                i++;
             }
         }
         Lit++;
@@ -168,22 +171,25 @@ void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext) {
             for (Lit2 = next(Lit1); Lit2 != Lend1; Lit2++) {
                 // Y, Z belong to K, K belongs to PREFIX_BLOCKS(Ll)
                 // debug
-                auto test = (uint32_t)1;
                 auto x = *Lit1 | *Lit2;
+                auto i = (int)log2((double)x);
+                auto test = (uint32_t)1 << i;
+                i = COL_NUM - i - 1;
                 bool flag = true;
                 std::vector<int> attributes;
-                while (test <= x) {
+                while ((x << (i + 17)) != x) {
                     auto temp = x & ~test; // X \ { A }
                     if (temp != x) {
                         // A belongs to X
-                        attributes.push_back((int)log2((double)test));
+                        attributes.push_back(i);
                         if (Ll.find(temp) == Lend) {
                             // A belongs to X && X \ { A } not belongs to Ll
                             flag = false;
                             break;
                         }
                     }
-                    test = test << 1;
+                    test = test >> 1;
+                    i++;
                 }
                 if (flag) {
                     Lnext.insert(x);
@@ -275,8 +281,10 @@ void computePrefixBlocks(std::set<uint32_t> &Ll, std::set<std::set<uint32_t>> &r
     std::set<uint32_t> emptySet;
     auto it = Ll.begin(), itend = Ll.end();
     for (; it != itend; it++) {
-        auto test = (uint32_t)16384;
-        while (test > 0) {
+        auto i = (int)log2((double)(*it));
+        auto test = (uint32_t)1 << i;
+        i = COL_NUM - i - 1;
+        while ((*it << (i + 17)) != *it) {
             auto dif = *it & ~test;
             if (dif != *it) {
                 if (tempResult.find(dif) == tempResult.end()) {
@@ -286,6 +294,7 @@ void computePrefixBlocks(std::set<uint32_t> &Ll, std::set<std::set<uint32_t>> &r
                 break;
             }
             test = test >> 1;
+            i++;
         }
     }
     auto rit = tempResult.begin(), rend = tempResult.end();
