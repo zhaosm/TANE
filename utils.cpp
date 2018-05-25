@@ -36,7 +36,6 @@ void tane(std::vector<std::vector<std::string>> &r, std::set<uint32_t> &deps) {
     int i;
     std::set<uint32_t> L;
     RHSCs[(uint32_t)0] = (uint32_t)32767;
-//    std::map<uint32_t, std::vector<std::vector<int>>> partitions;
     for (i = 0; i < COL_NUM; i++) {
         uint32_t temp = (uint32_t)1 << (COL_NUM - i - 1);
         L.insert(temp);
@@ -101,8 +100,8 @@ void prune(std::set<uint32_t> &Ll, std::set<uint32_t> &deps) {
             auto dif = RHSCs[*Lit] & ~*Lit; // C+(X) \ X
             auto i = (int)log2((double)dif);
             auto test = (uint32_t)1 << i;
-            i = COL_NUM - i - 1;
-            while ((dif << (i + 17)) != dif) {
+            auto _dif = dif << (17 + COL_NUM - i - 1);
+            while (_dif > (uint32_t)0) {
                 if (test != *Lit) {
                     if ((dif & ~test) != dif) {
                         // A belongs to dif
@@ -119,7 +118,7 @@ void prune(std::set<uint32_t> &Ll, std::set<uint32_t> &deps) {
                     }
                 }
                 test = test >> 1;
-                i++;
+                _dif = _dif << 1;
             }
         }
         Lit++;
@@ -175,9 +174,10 @@ void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext) {
                 auto i = (int)log2((double)x);
                 auto test = (uint32_t)1 << i;
                 i = COL_NUM - i - 1;
+                auto _x = x << (17 + i);
                 bool flag = true;
                 std::vector<int> attributes;
-                while ((x << (i + 17)) != x) {
+                while (_x > (uint32_t)0) {
                     auto temp = x & ~test; // X \ { A }
                     if (temp != x) {
                         // A belongs to X
@@ -190,6 +190,7 @@ void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext) {
                     }
                     test = test >> 1;
                     i++;
+                    _x = _x << 1;
                 }
                 if (flag) {
                     Lnext.insert(x);
@@ -283,8 +284,8 @@ void computePrefixBlocks(std::set<uint32_t> &Ll, std::set<std::set<uint32_t>> &r
     for (; it != itend; it++) {
         auto i = (int)log2((double)(*it));
         auto test = (uint32_t)1 << i;
-        i = COL_NUM - i - 1;
-        while ((*it << (i + 17)) != *it) {
+        auto _it = *it << (17 + COL_NUM - i - 1);
+        while (_it > (uint32_t)0) {
             auto dif = *it & ~test;
             if (dif != *it) {
                 if (tempResult.find(dif) == tempResult.end()) {
@@ -294,7 +295,7 @@ void computePrefixBlocks(std::set<uint32_t> &Ll, std::set<std::set<uint32_t>> &r
                 break;
             }
             test = test >> 1;
-            i++;
+            _it = _it << 1;
         }
     }
     auto rit = tempResult.begin(), rend = tempResult.end();

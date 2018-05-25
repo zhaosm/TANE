@@ -30,7 +30,8 @@ int main() {
         i = 0;
         while (i <= 15) {
             if (temp & (uint32_t)2147483648) {
-                fout << i << " ";
+                fout << i;
+                break;
             }
             i++;
             temp = temp << 1;
