@@ -15,13 +15,15 @@
 
 extern std::vector<int> T;
 extern std::vector<std::vector<int>> S;
-extern std::map<uint32_t, std::set<int>> combinations;
+extern std::vector<std::vector<int>> combinations;
+extern std::vector<std::vector<std::vector<int>>> partitions;
+extern std::vector<uint32_t> RHSCs;
 
 extern void readData(std::string fname, std::vector<std::vector<std::string>> &r);
 extern void tane(std::vector<std::vector<std::string>> &r, std::set<uint32_t> &deps);
-extern void computeDependencies(std::set<uint32_t> &L, std::map<uint32_t, uint32_t> &RHSCs, std::map<uint32_t, std::vector<std::vector<int>>> &partitions, std::set<uint32_t> &deps);
-extern void prune(std::set<uint32_t> &Ll, std::map<uint32_t, uint32_t> &RHSCs, std::map<uint32_t, std::vector<std::vector<int>>> &partitions, std::set<uint32_t> &deps);
-extern void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext, std::map<uint32_t, std::vector<std::vector<int>>> &partitions);
+extern void computeDependencies(std::set<uint32_t> &L, std::set<uint32_t> &deps);
+extern void prune(std::set<uint32_t> &Ll, std::set<uint32_t> &deps);
+extern void generateNextLevel(std::set<uint32_t> &Ll, std::set<uint32_t> &Lnext);
 extern void computeStrippedProduct(std::vector<std::vector<int>> &partition1, std::vector<std::vector<int>> &partition2, std::vector<std::vector<int>> &result);
 // extern int computeE(std::vector<std::vector<int>> &sub, std::vector<std::vector<int>> &sup);
 extern void computeSingleAttributePartition(std::vector<std::vector<std::string>> &r, int attributeIndex, std::vector<std::vector<int>> &result);

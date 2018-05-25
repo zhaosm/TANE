@@ -1,8 +1,12 @@
 #include <iostream>
 #include <fstream>
 #include "utils.h"
+#include <time.h>
 
 int main() {
+    double start, stop;
+    start = time(NULL);
+    start = clock();
     std::string fname = "../data/data.txt";
     std::string ofname = "../data/result.txt";
     std::vector<std::vector<std::string>> r;
@@ -37,5 +41,7 @@ int main() {
         }
         fout << "\n";
     }
+    stop = clock();
+    std::cout << "Time: " << ((double)(stop - start)) / CLOCKS_PER_SEC << "s" << std::endl;
     return 0;
 }
